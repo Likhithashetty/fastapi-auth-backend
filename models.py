@@ -1,10 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from pymongo import MongoClient
+from database import db  # Import the database connection
 
-class User(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+# User collection
+users_collection = db["users"]
