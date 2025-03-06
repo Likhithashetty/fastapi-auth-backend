@@ -1,6 +1,18 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel
+from typing import Optional
 
-class UserCreate(BaseModel):
-    email: EmailStr
-    username: str = Field(min_length=4, max_length=20)
-    password: str = Field(min_length=8, max_length=20)
+# User Schema
+class UserSchema(BaseModel):
+    email: str
+    name: str
+    password: str
+
+class UserLoginSchema(BaseModel):
+    email: str
+    password: str
+
+# Trip Schema
+class TripSchema(BaseModel):
+    name: str
+    description: Optional[str] = None
+    location: str

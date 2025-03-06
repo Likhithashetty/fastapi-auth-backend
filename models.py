@@ -1,5 +1,4 @@
-from pymongo import MongoClient
-from database import db  # Import the database connection
+from database import db  # Import MongoDB connection
 
-# User collection
 users_collection = db["users"]
+trips_collection = db["trips"]

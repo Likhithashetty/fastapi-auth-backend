@@ -1,85 +1,37 @@
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
-from passlib.context import CryptContext
-from database import db
-from bson.objectid import ObjectId
-from jose import JWTError, jwt
-import datetime
+from database import users_collection
+from schemas import UserSchema, UserLoginSchema
+from bson import ObjectId
+import bcrypt
 
-# Router setup
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-# Password hashing setup
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Secret key for JWT
-SECRET_KEY = "your_secret_key"
-ALGORITHM = "HS256"
-
-# OAuth2 scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-
-
-# Schema for User Registration
-class UserCreate(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-
-# Function to hash password
+# Hash password
 def hash_password(password: str):
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-
-# Function to verify password
+# Verify password
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
 
-
-# Function to create JWT Token
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-# 📌 Route: User Registration
+# Register User
 @router.post("/register")
-async def register_user(user: UserCreate):
-    existing_user = db["users"].find_one({"email": user.email})
-
+async def register(user: UserSchema):
+    existing_user = users_collection.find_one({"email": user.email})
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    # Password Validation: At least 8 characters, 1 letter, 1 number
-    if len(user.password) < 8 or not any(char.isalpha() for char in user.password) or not any(char.isdigit() for char in user.password):
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long, contain at least one letter and one number.")
+        raise HTTPException(status_code=400, detail="Email already exists")
 
     hashed_password = hash_password(user.password)
+    new_user = {"email": user.email, "name": user.name, "password": hashed_password}
+    users_collection.insert_one(new_user)
+    
+    return {"message": "User registered successfully"}
 
-    # Save user to database
-    new_user = {
-        "username": user.username,
-        "email": user.email,
-        "password": hashed_password
-    }
-
-    inserted_user = db["users"].insert_one(new_user)
-    return {"message": "User registered successfully", "user_id": str(inserted_user.inserted_id)}
-
-
-# 📌 Route: User Login
+# Login User
 @router.post("/login")
-async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = db["users"].find_one({"email": form_data.username})
-
-    if not user or not verify_password(form_data.password, user["password"]):
-        raise HTTPException(status_code=400, detail="Invalid credentials")
-
-    # Generate JWT Token
-    access_token = create_access_token({"sub": str(user["_id"]), "email": user["email"]})
-
-    return {"message": "Login successful", "access_token": access_token, "token_type": "bearer"}
+async def login(user: UserLoginSchema):
+    db_user = users_collection.find_one({"email": user.email})
+    if not db_user or not verify_password(user.password, db_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    return {"message": "Login successful"}
