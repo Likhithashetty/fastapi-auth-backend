@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from schemas import TripSchema
 from database import trips_collection
 from bson import ObjectId
 
@@ -42,16 +43,22 @@ async def create_trip(trip: TripResponse):
     return {"message": "Trip created successfully", "trip_id": str(result.inserted_id)}
 
 # ✅ Get all trips (Fixed for Swagger UI)
-@router.get("/trips/", response_model=list[TripResponse])
+@router.get("/trips/", response_model=list[TripSchema])
 async def get_trips():
-    trips = list(trips_collection.find({}))
-    if not trips:
-        return []
+    try:
+        trips = list(trips_collection.find({}))  # Fetch all trips from MongoDB
 
-    for trip in trips:
-        trip["_id"] = str(trip["_id"])  # Convert ObjectId to string
+        if not trips:
+            return []  # ✅ Return empty list if no trips exist
 
-    return trips
+        # ✅ Convert MongoDB _id to string and rename it to "id"
+        for trip in trips:
+            trip["id"] = str(trip.pop("_id"))  # Convert ObjectId to string
+
+        return trips  # ✅ Return the updated trip list
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))  # ✅ Return detailed error
 
 # ✅ Get trip by ID
 @router.get("/{trip_id}", response_model=TripResponse)
