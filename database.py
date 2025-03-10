@@ -14,3 +14,4 @@ db = client["trip_management"]  # Database name
 users_collection = db["users"]  
 trips_collection = db["trips"]  
 leaders_collection = db["leaders"]  # Add this if needed for leaders
+applications_collection = db["applications"]  # ✅ Add this line for storing applications

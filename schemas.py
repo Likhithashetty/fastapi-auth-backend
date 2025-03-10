@@ -1,14 +1,24 @@
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
+class ItineraryItem(BaseModel):
+    day: str
+    activity: str
+    stops: Optional[List[str]] = []  # ✅ New field for stops (optional)
+
+class Schedule(BaseModel):
+    start_date: str
+    end_date: str
+
+class Transportation(BaseModel):
+    mode: str
+    details: str
+
 class TripSchema(BaseModel):
-    id: Optional[str] = None  # Allows an optional ID
+    id: Optional[str] = None
     name: str
     description: str
     location: str
-    itinerary: List[Dict[str, str]]  # Example: [{"day": "1", "activity": "Sightseeing"}]
-    schedule: Dict[str, str]  # Example: {"start_date": "2025-06-10", "end_date": "2025-06-15"}
-    transportation: Dict[str, str]  # Example: {"mode": "flight", "details": "Flight XYZ123"}
-
-    class Config:
-        form_attributes = True  # Enables conversion from DB objects
+    itinerary: List[ItineraryItem]  # ✅ Now includes stops
+    schedule: Schedule
+    transportation: Transportation
